@@ -5,6 +5,12 @@ edition = "2024"
 license = "MIT"
 
 [dependencies]
+tokio = { version = "1.49.0", features = [
+  "fs",
+  "macros",
+  "rt-multi-thread",
+  "process",
+] }
 
 [lints.clippy]
 needless_return = "allow"
