@@ -29,6 +29,10 @@ pub struct Cli {
   /// Use verbose output
   #[arg(short, long, default_value_t = false, global = true)]
   pub verbose: bool,
+
+  /// Output result in JSON format
+  #[arg(short = 'j', long, default_value_t = false)]
+  pub output_json: bool,
 }
 
 #[derive(Subcommand)]

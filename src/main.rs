@@ -4,6 +4,7 @@ mod config;
 mod files;
 mod input;
 mod logging;
+mod output;
 
 use clap::Parser;
 
@@ -11,6 +12,7 @@ use crate::app::App;
 use crate::cli::{Cli, Commands};
 use crate::config::Config;
 use crate::logging::set_verbose;
+use crate::output::format::OutputFormat;
 
 #[tokio::main]
 async fn main() {
@@ -27,6 +29,7 @@ async fn main() {
   };
 
   let app = App::new(config);
+  let format = OutputFormat::from_flags(cli.output_json);
 
   let result = match cli.command {
     Some(Commands::ResetConfig) => match Config::reset_to_defaults().await {
@@ -39,7 +42,7 @@ async fn main() {
         std::process::exit(1);
       }
     },
-    None => app.refine_text(cli.input, cli.file).await,
+    None => app.refine_text(cli.input, cli.file, format).await,
   };
 
   match result {

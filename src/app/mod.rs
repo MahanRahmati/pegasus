@@ -11,6 +11,7 @@ pub mod errors;
 use crate::app::errors::{RuntimeError, RuntimeResult};
 use crate::config::Config;
 use crate::input::InputReader;
+use crate::output::format::OutputFormat;
 
 /// Main application orchestrator for Pegasus.
 ///
@@ -39,6 +40,7 @@ impl App {
   ///
   /// * `input` - The inline text input
   /// * `file_path` - The file path for input text
+  /// * `format` - The desired output format
   ///
   /// # Returns
   ///
@@ -47,6 +49,7 @@ impl App {
     &self,
     input: Option<String>,
     file_path: Option<String>,
+    format: OutputFormat,
   ) -> RuntimeResult<String> {
     // TODO: Integrate with LLM client once implemented
     // For now, just return the input text as a placeholder
