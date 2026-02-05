@@ -34,8 +34,8 @@ const DEFAULT_LLM_URL: &str = "http://127.0.0.1:8080";
 /// and general application preferences.
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Config {
-  pub llm: LLMConfig,
-  pub general: GeneralConfig,
+  llm: LLMConfig,
+  general: GeneralConfig,
 }
 
 /// Configuration for the LLM service.
@@ -43,15 +43,15 @@ pub struct Config {
 /// Contains settings for the LLM API endpoint.
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct LLMConfig {
-  pub url: Option<String>,
+  url: Option<String>,
 }
 
 /// General application configuration.
 ///
 /// Contains settings that affect overall application behavior.
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct GeneralConfig {
-  pub custom_dictionary_path: Option<String>,
+struct GeneralConfig {
+  custom_dictionary_path: Option<String>,
 }
 
 impl Config {
@@ -171,26 +171,6 @@ impl Config {
       .await
       .map_err(|e| ConfigError::FileRead(e.to_string()))?;
     return Ok(());
-  }
-
-  /// Resets configuration to defaults at a specific path.
-  ///
-  /// This method is intended for testing purposes to reset configuration
-  /// in temporary directories instead of the user's real config directory.
-  ///
-  /// # Arguments
-  ///
-  /// * `config_path` - Path where the default configuration should be saved
-  ///
-  /// # Returns
-  ///
-  /// A `ConfigResult<()>` indicating success or failure.
-  #[cfg(test)]
-  pub(crate) async fn reset_to_defaults_at_path(
-    config_path: PathBuf,
-  ) -> ConfigResult<()> {
-    let default_config = Config::default();
-    return Config::save_to_path(default_config, config_path).await;
   }
 }
 
