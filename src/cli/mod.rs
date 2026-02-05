@@ -3,6 +3,12 @@
 //! This module defines the CLI structure using `clap` for parsing command-line
 //! arguments and subcommands. It provides type-safe argument handling and
 //! automatic help generation.
+//!
+//! ## Commands
+//!
+//! - `--input <text>`: Refine the input text
+//! - `--file <path>`: Refine the input text from a file
+//! - `reset-config`: Reset configuration to default values
 
 use clap::{Parser, Subcommand};
 
@@ -13,6 +19,12 @@ use clap::{Parser, Subcommand};
 pub struct Cli {
   #[command(subcommand)]
   pub command: Option<Commands>,
+
+  #[arg(short, long, conflicts_with = "file")]
+  pub input: Option<String>,
+
+  #[arg(short, long, conflicts_with = "input")]
+  pub file: Option<String>,
 
   /// Use verbose output
   #[arg(short, long, default_value_t = false, global = true)]
