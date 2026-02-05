@@ -102,7 +102,7 @@ impl Config {
       .general
       .custom_dictionary_path
       .clone()
-      .unwrap_or(String::new());
+      .unwrap_or_default();
   }
 
   /// Resets the configuration to default values and saves it.
