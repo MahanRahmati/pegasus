@@ -8,8 +8,9 @@
 
 pub mod errors;
 
-use crate::app::errors::RuntimeResult;
+use crate::app::errors::{RuntimeError, RuntimeResult};
 use crate::config::Config;
+use crate::input::InputReader;
 
 /// Main application orchestrator for Pegasus.
 ///
@@ -36,14 +37,22 @@ impl App {
   ///
   /// # Arguments
   ///
-  /// * `input_text` - The text to refine
+  /// * `input` - The inline text input
+  /// * `file_path` - The file path for input text
   ///
   /// # Returns
   ///
   /// The refined text, or an error if refinement fails.
-  pub async fn refine_text(&self, input_text: String) -> RuntimeResult<String> {
+  pub async fn refine_text(
+    &self,
+    input: Option<String>,
+    file_path: Option<String>,
+  ) -> RuntimeResult<String> {
     // TODO: Integrate with LLM client once implemented
     // For now, just return the input text as a placeholder
+    let input_text = InputReader::read_input(input, file_path)
+      .await
+      .map_err(|e| RuntimeError::Input(e.to_string()))?;
     return Ok(input_text);
   }
 }
