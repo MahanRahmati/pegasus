@@ -8,9 +8,6 @@ pub enum RuntimeError {
   #[error("Input Error: {0}")]
   Input(String),
 
-  #[error("LLM Error: {0}")]
-  LLM(String),
-
   #[error("Refinement Error: {0}")]
   Refinement(String),
 }
