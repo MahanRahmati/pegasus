@@ -3,6 +3,7 @@ mod cli;
 mod config;
 mod files;
 mod input;
+mod llm;
 mod logging;
 mod network;
 mod output;
