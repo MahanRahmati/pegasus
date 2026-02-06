@@ -4,6 +4,7 @@ mod config;
 mod files;
 mod input;
 mod logging;
+mod network;
 mod output;
 
 use clap::Parser;
