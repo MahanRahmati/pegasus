@@ -40,10 +40,12 @@ pub struct Config {
 
 /// Configuration for the LLM service.
 ///
-/// Contains settings for the LLM API endpoint.
+/// Contains settings for the LLM API endpoint, model, and API key.
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct LLMConfig {
   url: Option<String>,
+  model: Option<String>,
+  api_key: Option<String>,
 }
 
 /// General application configuration.
@@ -88,6 +90,28 @@ impl Config {
       .url
       .clone()
       .unwrap_or(String::from(DEFAULT_LLM_URL));
+  }
+
+  /// Gets the LLM model name.
+  ///
+  /// Returns the configured model name or None if not set.
+  ///
+  /// # Returns
+  ///
+  /// An `String` containing the model name.
+  pub fn get_llm_model(&self) -> String {
+    return self.llm.model.clone().unwrap_or_default();
+  }
+
+  /// Gets the LLM API key.
+  ///
+  /// Returns the configured API key or None if not set.
+  ///
+  /// # Returns
+  ///
+  /// An `String` containing the API key.
+  pub fn get_llm_api_key(&self) -> String {
+    return self.llm.api_key.clone().unwrap_or_default();
   }
 
   /// Gets the custom dictionary path.
@@ -179,6 +203,8 @@ impl Default for Config {
     return Config {
       llm: LLMConfig {
         url: Some(String::from(DEFAULT_LLM_URL)),
+        model: Some(String::new()),
+        api_key: Some(String::new()),
       },
       general: GeneralConfig {
         custom_dictionary_path: Some(String::new()),
