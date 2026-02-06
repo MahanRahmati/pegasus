@@ -49,7 +49,7 @@ impl InputSource {
   ///
   /// Returns the input text, or an error if input reading fails.
   pub async fn read_from_input_source(&self) -> InputResult<String> {
-    return match self {
+    match self {
       InputSource::Input(input) => {
         if input.trim().is_empty() {
           return Err(InputError::EmptyInput);
