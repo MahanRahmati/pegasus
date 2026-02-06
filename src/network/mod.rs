@@ -78,7 +78,12 @@ impl HttpClient {
     self.check_url().await?;
 
     let client = reqwest::Client::new();
-    let full_url = format!("{}/{}", self.base_url, endpoint);
+
+    let full_url = if self.base_url.ends_with("/") {
+      format!("{}{}", self.base_url, endpoint)
+    } else {
+      format!("{}/{}", self.base_url, endpoint)
+    };
 
     vlog!("Sending POST request to: {}", full_url);
 
