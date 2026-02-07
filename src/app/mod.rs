@@ -37,6 +37,50 @@ impl App {
     return App { config };
   }
 
+  /// Creates an LLM client configured with the current settings.
+  ///
+  /// # Returns
+  ///
+  /// A configured `LLMClient` instance.
+  fn create_llm_client(&self) -> LLMClient {
+    vlog!(
+      "Initializing LLM client with model: {}",
+      self.config.get_llm_model()
+    );
+
+    return LLMClient::new(
+      self.config.get_llm_url(),
+      self.config.get_llm_model(),
+      self.config.get_llm_api_key(),
+    );
+  }
+
+  /// Formats the refined text according to the specified output format.
+  ///
+  /// # Arguments
+  ///
+  /// * `refined_text` - The refined text to format
+  /// * `format` - The desired output format
+  ///
+  /// # Returns
+  ///
+  /// A `RuntimeResult<String>` containing the formatted output or an error.
+  fn format_output(
+    &self,
+    refined_text: String,
+    format: OutputFormat,
+  ) -> RuntimeResult<String> {
+    return match format {
+      OutputFormat::Text => Ok(refined_text),
+      OutputFormat::Json => {
+        let json_output = serde_json::json!({ "text": refined_text });
+        serde_json::to_string(&json_output).map_err(|e| {
+          RuntimeError::Refinement(format!("Failed to serialize JSON: {}", e))
+        })
+      }
+    };
+  }
+
   /// Refines the input text using the LLM.
   ///
   /// # Arguments
@@ -60,33 +104,69 @@ impl App {
 
     let dictionary_words = self.load_dictionary().await?;
 
-    vlog!(
-      "Initializing LLM client with model: {}",
-      self.config.get_llm_model()
-    );
-
-    let llm = LLMClient::new(
-      self.config.get_llm_url(),
-      self.config.get_llm_model(),
-      self.config.get_llm_api_key(),
-    );
+    let llm = self.create_llm_client();
 
     let refined_text = llm
       .refine_text(&input_text, &dictionary_words)
       .await
       .map_err(|e| RuntimeError::Refinement(e.to_string()))?;
 
-    let output = match format {
-      OutputFormat::Text => refined_text,
-      OutputFormat::Json => {
-        let json_output = serde_json::json!({ "text": refined_text });
-        serde_json::to_string(&json_output).map_err(|e| {
-          RuntimeError::Refinement(format!("Failed to serialize JSON: {}", e))
-        })?
-      }
-    };
+    return self.format_output(refined_text, format);
+  }
 
-    return Ok(output);
+  /// Refines a Whisper JSON transcription using confidence scores.
+  ///
+  /// Parses the Whisper JSON, identifies low-confidence words,
+  /// and sends the transcription to the LLM for refinement with
+  /// confidence awareness to reduce hallucination.
+  ///
+  /// # Arguments
+  ///
+  /// * `input` - The inline text input of the Whisper JSON
+  /// * `file_path` - The file path to the Whisper JSON file
+  /// * `format` - The desired output format
+  ///
+  /// # Returns
+  ///
+  /// The refined text, or an error if refinement fails.
+  pub async fn refine_whisper_transcription(
+    &self,
+    input: Option<String>,
+    file_path: Option<String>,
+    format: OutputFormat,
+  ) -> RuntimeResult<String> {
+    let input_text = InputReader::read_input(input, file_path)
+      .await
+      .map_err(|e| RuntimeError::Input(e.to_string()))?;
+
+    let transcription: crate::input::transcription::WhisperTranscription =
+      serde_json::from_str(&input_text).map_err(|e| {
+        RuntimeError::Input(format!("Failed to parse Whisper JSON: {}", e))
+      })?;
+
+    let segment_count = transcription.segments.as_ref().map_or(0, |s| s.len());
+    vlog!(
+      "Loaded Whisper transcription: {} segments, {} words, duration: {:.1}s",
+      segment_count,
+      transcription.word_count(),
+      transcription.duration_or_default()
+    );
+
+    let dictionary_words = self.load_dictionary().await?;
+    let probability_threshold = self.config.get_whisper_probability_threshold();
+
+    let llm = self.create_llm_client();
+
+    let refined_text = llm
+      .refine_whisper_transcription(
+        &transcription,
+        &dictionary_words,
+        probability_threshold,
+      )
+      .await
+      .map_err(|e| RuntimeError::Refinement(e.to_string()))?;
+
+    return self.format_output(refined_text, format);
   }
 
   /// Loads dictionary words from the configured dictionary file.

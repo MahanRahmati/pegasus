@@ -4,6 +4,7 @@
 //! including input and files.
 
 pub mod errors;
+pub mod transcription;
 
 use crate::files::operations;
 use crate::input::errors::{InputError, InputResult};

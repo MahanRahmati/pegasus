@@ -31,7 +31,6 @@ async fn main() {
   };
 
   let app = App::new(config);
-  let format = OutputFormat::from_flags(cli.output_json);
 
   let result = match cli.command {
     Some(Commands::ResetConfig) => match Config::reset_to_defaults().await {
@@ -44,7 +43,18 @@ async fn main() {
         std::process::exit(1);
       }
     },
-    None => app.refine_text(cli.input, cli.file, format).await,
+    Some(Commands::WhisperTranscribe {
+      input,
+      file,
+      output_json,
+    }) => {
+      let format = OutputFormat::from_flags(output_json);
+      app.refine_whisper_transcription(input, file, format).await
+    }
+    None => {
+      let format = OutputFormat::from_flags(cli.output_json);
+      app.refine_text(cli.input, cli.file, format).await
+    }
   };
 
   match result {

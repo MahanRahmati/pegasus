@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
+use crate::input::transcription::WhisperTranscription;
 use crate::llm::errors::{LLMError, LLMResult};
-use crate::llm::prompts::{build_system_prompt, build_user_prompt};
+use crate::llm::prompts::{
+  build_system_prompt, build_user_prompt, build_whisper_system_prompt,
+  build_whisper_user_prompt,
+};
 use crate::llm::request::{ChatCompletionRequest, ChatMessage};
 use crate::llm::response::ChatCompletionResponse;
 use crate::network::HttpClient;
@@ -38,29 +42,21 @@ impl LLMClient {
     };
   }
 
-  /// Refines the input text using the LLM.
-  ///
-  /// Sends the text to the LLM with appropriate system and user prompts,
-  /// including dictionary words to reduce hallucination.
+  /// Executes the LLM refinement request with given prompts.
   ///
   /// # Arguments
   ///
-  /// * `input_text` - The transcription text to refine
-  /// * `dictionary_words` - List of words from the user's custom dictionary
+  /// * `system_prompt` - The system prompt for the LLM
+  /// * `user_prompt` - The user prompt containing text to refine
   ///
   /// # Returns
   ///
   /// A `LLMResult<String>` containing the refined text or an error.
-  pub async fn refine_text(
+  async fn execute_refinement(
     &self,
-    input_text: &str,
-    dictionary_words: &[String],
+    system_prompt: String,
+    user_prompt: String,
   ) -> LLMResult<String> {
-    vlog!("Preparing LLM request for text refinement");
-
-    let system_prompt = build_system_prompt(dictionary_words);
-    let user_prompt = build_user_prompt(input_text);
-
     let request = ChatCompletionRequest::new(
       self.model.clone(),
       vec![
@@ -109,7 +105,77 @@ impl LLMClient {
       ));
     }
 
+    return Ok(refined_text);
+  }
+
+  /// Refines the input text using the LLM.
+  ///
+  /// Sends the text to the LLM with appropriate system and user prompts,
+  /// including dictionary words to reduce hallucination.
+  ///
+  /// # Arguments
+  ///
+  /// * `input_text` - The transcription text to refine
+  /// * `dictionary_words` - List of words from the user's custom dictionary
+  ///
+  /// # Returns
+  ///
+  /// A `LLMResult<String>` containing the refined text or an error.
+  pub async fn refine_text(
+    &self,
+    input_text: &str,
+    dictionary_words: &[String],
+  ) -> LLMResult<String> {
+    vlog!("Preparing LLM request for text refinement");
+
+    let system_prompt = build_system_prompt(dictionary_words);
+    let user_prompt = build_user_prompt(input_text);
+
+    let refined_text =
+      self.execute_refinement(system_prompt, user_prompt).await?;
+
     vlog!("Text refinement completed successfully");
+
+    return Ok(refined_text);
+  }
+
+  /// Refines Whisper transcription using confidence scores to reduce hallucination.
+  ///
+  /// Sends the transcription to the LLM with low-confidence words flagged,
+  /// allowing the LLM to make better decisions about ambiguous words.
+  ///
+  /// # Arguments
+  ///
+  /// * `transcription` - The Whisper transcription data with confidence scores
+  /// * `dictionary_words` - List of words from the user's custom dictionary
+  /// * `probability_threshold` - Words below this threshold will be flagged
+  ///
+  /// # Returns
+  ///
+  /// A `LLMResult<String>` containing the refined text or an error.
+  pub async fn refine_whisper_transcription(
+    &self,
+    transcription: &WhisperTranscription,
+    dictionary_words: &[String],
+    probability_threshold: f64,
+  ) -> LLMResult<String> {
+    vlog!("Preparing LLM request for Whisper transcription refinement");
+    vlog!(
+      "Low probability threshold: {}, words flagged: {}",
+      probability_threshold,
+      transcription
+        .get_low_probability_words(probability_threshold)
+        .len()
+    );
+
+    let system_prompt = build_whisper_system_prompt(dictionary_words);
+    let user_prompt =
+      build_whisper_user_prompt(transcription, probability_threshold);
+
+    let refined_text =
+      self.execute_refinement(system_prompt, user_prompt).await?;
+
+    vlog!("Whisper transcription refinement completed successfully");
 
     return Ok(refined_text);
   }

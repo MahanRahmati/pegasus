@@ -8,6 +8,7 @@
 //!
 //! - [`LLMConfig`]: LLM service settings
 //! - [`GeneralConfig`]: General application behavior settings
+//! - [`WhisperTranscriptionConfig`]: Whisper transcription processing settings
 //!
 //! ## Configuration File Location
 //!
@@ -27,14 +28,16 @@ use crate::files::operations;
 const DEFAULT_DIRECTORY: &str = "pegasus";
 const DEFAULT_CONFIG_NAME: &str = "config.toml";
 const DEFAULT_LLM_URL: &str = "http://127.0.0.1:8080";
+const DEFAULT_WHISPER_PROBABILITY_THRESHOLD: f64 = 0.7;
 
 /// Main configuration structure for the Pegasus application.
 ///
 /// This struct contains all configuration sections including LLM settings,
-/// and general application preferences.
+/// general application preferences, and Whisper transcription settings.
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Config {
   llm: LLMConfig,
+  whisper: WhisperTranscriptionConfig,
   general: GeneralConfig,
 }
 
@@ -46,6 +49,15 @@ pub struct LLMConfig {
   url: Option<String>,
   model: Option<String>,
   api_key: Option<String>,
+}
+
+/// Configuration for Whisper transcription processing.
+///
+/// Contains settings for processing Whisper JSON output to reduce
+/// hallucination using probability scores and timestamps.
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+struct WhisperTranscriptionConfig {
+  probability_threshold: Option<f64>,
 }
 
 /// General application configuration.
@@ -112,6 +124,21 @@ impl Config {
   /// An `String` containing the API key.
   pub fn get_llm_api_key(&self) -> String {
     return self.llm.api_key.clone().unwrap_or_default();
+  }
+
+  /// Gets the Whisper probability threshold.
+  ///
+  /// Returns the configured probability threshold for flagging low-probability
+  /// words during transcription refinement. Defaults to 0.7 if not set.
+  ///
+  /// # Returns
+  ///
+  /// A `f64` containing the probability threshold (0.0 to 1.0).
+  pub fn get_whisper_probability_threshold(&self) -> f64 {
+    return self
+      .whisper
+      .probability_threshold
+      .unwrap_or(DEFAULT_WHISPER_PROBABILITY_THRESHOLD);
   }
 
   /// Gets the custom dictionary path.
@@ -205,6 +232,9 @@ impl Default for Config {
         url: Some(String::from(DEFAULT_LLM_URL)),
         model: Some(String::new()),
         api_key: Some(String::new()),
+      },
+      whisper: WhisperTranscriptionConfig {
+        probability_threshold: Some(DEFAULT_WHISPER_PROBABILITY_THRESHOLD),
       },
       general: GeneralConfig {
         custom_dictionary_path: Some(String::new()),
